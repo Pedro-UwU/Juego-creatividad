@@ -1,0 +1,4 @@
+fastapi[all]==0.115.12
+websockets==15.0.1
+uvicorn==0.34.1
+
