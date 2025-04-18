@@ -12,21 +12,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 # Import the WebSocket handler
+
 app = FastAPI()
 
 # Mount static files from the frontend build directory
 app.mount("/assets", StaticFiles(directory="../frontend/dist/assets"), name="assets")
 
-
 # WebSocket endpoint
+
+
 @app.websocket("/ws")
 async def websocket_route(websocket: WebSocket):
     await websocket_endpoint(websocket)
 
-
 # Root route returns the index.html from the Svelte build
+
+
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
     # Path to the compiled frontend
