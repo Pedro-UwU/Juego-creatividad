@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { gameState, connect, disconnect, setReady, setUnready, startGame, markAsDead, getPlayerById } from '../lib/gameStore.js';
+  import { gameState, connect, disconnect, setReady, setUnready, startGame, markAsDead } from '../lib/gameStore.js';
   import { getText } from '../lib/textStore.js';
   import PlayersList from './PlayersList.svelte';
   import JoinForm from './JoinForm.svelte';
@@ -13,14 +13,33 @@
     currentPlayer = state.players.find(p => p.id === state.playerId);
   });
   
-  // Connect when component mounts
+  // Handle visibility change (when user switches tabs or locks/unlocks phone)
+  function handleVisibilityChange() {
+    if (document.visibilityState === 'visible') {
+      console.log('Page became visible - checking connection');
+      // If we have a player ID but are disconnected, try to reconnect
+      if (currentState.playerId && !currentState.isConnected && !currentState.isReconnecting) {
+        console.log('Reconnecting due to visibility change');
+        connect();
+      }
+    }
+  }
+  
+  // Connect when component mounts and set up visibility listener
   onMount(() => {
     connect();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Add beforeunload handler to disconnect nicely when possible
+    window.addEventListener('beforeunload', () => {
+      disconnect();
+    });
   });
   
   // Cleanup when component is destroyed
   onDestroy(() => {
     unsubscribe();
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
     disconnect();
   });
   
@@ -45,11 +64,13 @@
   
   {#if !currentState.isConnected}
     <div class="connection-status error">
-      {getText('connection.connecting')}
+      {currentState.isReconnecting ? 
+        getText('connection.reconnecting') : 
+        getText('connection.connecting')}
     </div>
   {:else if currentState.connectionError}
     <div class="connection-status error">
-      {getText('connection.error', { message: currentState.connectionError })}
+      {currentState.connectionError}
     </div>
   {:else if !currentState.playerId}
     <JoinForm />

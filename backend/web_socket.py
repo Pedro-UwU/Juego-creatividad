@@ -1,7 +1,6 @@
 from fastapi import WebSocket
 import logging
-from message_handler import handle_message
-from lobby_manager import lobby_manager
+from message_handler import handle_message, handle_disconnect
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -25,7 +24,6 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"WebSocket disconnected: {str(e)}")
     finally:
-        # Clean up when a player disconnects
+        # Handle disconnection with timeout for reconnection
         if player_id:
-            lobby_manager.remove_player(player_id)
-            await lobby_manager.broadcast_lobby_state()
+            await handle_disconnect(player_id)

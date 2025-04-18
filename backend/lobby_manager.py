@@ -1,7 +1,7 @@
 import logging
 import json
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List,  Optional
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -40,6 +40,15 @@ class LobbyManager:
         self.websockets[player_id] = websocket
         logger.info(f"Player {player_name} ({player_id}) joined the lobby")
         return player
+
+    def update_player_websocket(self, player_id: str, websocket) -> bool:
+        """Update a player's websocket connection (for reconnection)."""
+        if player_id not in self.players:
+            return False
+
+        self.websockets[player_id] = websocket
+        logger.info(f"Updated websocket for player {self.players[player_id].name} ({player_id})")
+        return True
 
     def remove_player(self, player_id: str) -> Optional[Player]:
         """Remove a player from the lobby."""
@@ -95,11 +104,12 @@ class LobbyManager:
         message = json.dumps(lobby_state)
 
         # Send to all connected players
-        for websocket in self.websockets.values():
+        for player_id, websocket in list(self.websockets.items()):
             try:
                 await websocket.send_text(message)
             except Exception as e:
-                logger.error(f"Error sending message: {str(e)}")
+                logger.error(f"Error sending message to player {player_id}: {str(e)}")
+                # Don't remove here - this will be handled by the disconnect handler
 
 
 # Create a singleton instance
