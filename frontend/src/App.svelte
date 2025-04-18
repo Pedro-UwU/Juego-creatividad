@@ -1,10 +1,11 @@
 <script>
   import Lobby from './components/Lobby.svelte';
+  import { getText } from './lib/textStore.js';
 </script>
 
 <main>
-  <h1>Game Lobby</h1>
-  <p class="subtitle">Connect, get ready, and play!</p>
+  <h1>{getText('app.title')}</h1>
+  <p class="subtitle">{getText('app.subtitle')}</p>
   
   <Lobby />
 </main>

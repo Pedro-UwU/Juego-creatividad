@@ -1,5 +1,6 @@
 <script>
   import { gameState } from '../lib/gameStore.js';
+  import { getText } from '../lib/textStore.js';
   
   // Subscribe to the game state
   let currentState;
@@ -23,7 +24,7 @@
   <h3>Players</h3>
   
   {#if !currentState || currentState.players.length === 0}
-    <p class="empty-message">No players have joined yet</p>
+    <p class="empty-message">{getText('lobby.noplayers')}</p>
   {:else}
     <ul>
       {#each currentState.players as player}

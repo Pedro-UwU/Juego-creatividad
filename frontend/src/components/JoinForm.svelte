@@ -1,5 +1,6 @@
 <script>
   import { gameState, joinLobby } from '../lib/gameStore.js';
+  import { getText } from '../lib/textStore.js';
   
   let playerName = '';
   let currentState;
@@ -22,18 +23,20 @@
 </script>
 
 <div class="join-form">
-  <h2>Join Game Lobby</h2>
+  <h2>{getText('join.title')}</h2>
   
   {#if currentState.connectionError}
-    <div class="error-message">Error: {currentState.connectionError}</div>
+    <div class="error-message">
+      {getText('connection.error', { message: currentState.connectionError })}
+    </div>
   {/if}
   
   <div class="form-group">
-    <label for="player-name">Your Name:</label>
+    <label for="player-name">{getText('join.label')}</label>
     <input 
       id="player-name"
       type="text" 
-      placeholder="Enter your name" 
+      placeholder={getText('join.placeholder')}
       bind:value={playerName}
       onkeydown={handleKeyDown}
       disabled={!currentState.isConnected}
@@ -45,7 +48,7 @@
     disabled={!currentState.isConnected || !playerName.trim()}
     class="join-button"
   >
-    Join Lobby
+    {getText('join.button')}
   </button>
 </div>
 

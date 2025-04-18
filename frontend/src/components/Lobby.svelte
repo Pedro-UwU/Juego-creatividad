@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { gameState, connect, disconnect, setReady, setUnready, startGame, markAsDead, getPlayerById } from '../lib/gameStore.js';
+  import { getText } from '../lib/textStore.js';
   import PlayersList from './PlayersList.svelte';
   import JoinForm from './JoinForm.svelte';
   
@@ -40,43 +41,43 @@
 </script>
 
 <div class="lobby-container">
-  <h2>Game Lobby</h2>
+  <h2>{getText('lobby.title')}</h2>
   
   {#if !currentState.isConnected}
     <div class="connection-status error">
-      Connecting to server...
+      {getText('connection.connecting')}
     </div>
   {:else if currentState.connectionError}
     <div class="connection-status error">
-      Error: {currentState.connectionError}
+      {getText('connection.error', { message: currentState.connectionError })}
     </div>
   {:else if !currentState.playerId}
     <JoinForm />
   {:else}
     <div class="connection-status success">
-      Connected as {currentState.playerName}
+      {getText('connection.success', { playerName: currentState.playerName })}
     </div>
     
     <PlayersList />
     
     {#if currentState.gameStarted}
       <div class="game-container">
-        <h3>Game in Progress</h3>
+        <h3>{getText('game.title')}</h3>
         
         {#if currentState.gameOver}
           <div class="game-over">
-            <h4>Game Over!</h4>
-            <p>All players are dead</p>
+            <h4>{getText('game.gameover_title')}</h4>
+            <p>{getText('game.gameover_message')}</p>
           </div>
         {:else if currentPlayer?.status === 'ALIVE'}
           <div class="player-actions">
             <button class="death-button" onclick={markAsDead}>
-              I'm Dead
+              {getText('buttons.dead')}
             </button>
           </div>
         {:else}
           <div class="player-status-message">
-            You are dead!
+            {getText('game.player_dead')}
           </div>
         {/if}
       </div>
@@ -88,7 +89,7 @@
             onclick={handleReadyClick}
             class={currentPlayer.status === 'READY' ? 'cancel-button' : 'ready-button'}
           >
-            {currentPlayer.status === 'READY' ? 'CANCEL' : 'READY'}
+            {currentPlayer.status === 'READY' ? getText('buttons.cancel') : getText('buttons.ready')}
           </button>
           
           {#if currentState.allReady}
@@ -96,7 +97,7 @@
               onclick={startGame}
               class="start-button"
             >
-              Start Game
+              {getText('buttons.start')}
             </button>
           {/if}
         </div>
