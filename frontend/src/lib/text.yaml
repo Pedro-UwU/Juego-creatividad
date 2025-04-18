@@ -1,0 +1,46 @@
+# Application text content
+app:
+  title: "Game Lobby"
+  subtitle: "Connect, get ready, and play!"
+
+# Connection states
+connection:
+  connecting: "Connecting to server..."
+  error: "Error: {message}"
+  success: "Connected as {playerName}"
+  reconnecting: "Connection lost. Reconnecting..."
+  reconnected: "Reconnected successfully!"
+  reconnect_failed: "Unable to reconnect. Please refresh the page."
+
+# Lobby screen
+lobby:
+  title: "Game Lobby"
+  noplayers: "No players have joined yet"
+
+# Join form
+join:
+  title: "Join Game Lobby"
+  label: "Your Name:"
+  placeholder: "Enter your name"
+  button: "Join Lobby"
+
+# Player status
+status:
+  waiting: "WAITING"
+  ready: "READY"
+  alive: "ALIVE"
+  dead: "DEAD"
+
+# Action buttons
+buttons:
+  ready: "READY"
+  cancel: "CANCEL"
+  start: "Start Game"
+  dead: "I'm Dead"
+
+# Game state
+game:
+  title: "Game in Progress"
+  gameover_title: "Game Over!"
+  gameover_message: "All players are dead"
+  player_dead: "You are dead!"
