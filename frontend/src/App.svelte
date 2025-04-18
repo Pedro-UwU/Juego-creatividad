@@ -1,10 +1,12 @@
 <script>
-  let message = $state("Hello from Svelte 5!");
+  import ChatBox from './components/ChatBox.svelte';
 </script>
 
 <main>
-  <h1>Game Lobby App</h1>
-  <p>{message}</p>
+  <h1>WebSocket Test App</h1>
+  <p>Send messages to test the WebSocket connection</p>
+  
+  <ChatBox />
 </main>
 
 <style>
