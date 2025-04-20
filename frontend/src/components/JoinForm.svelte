@@ -1,5 +1,6 @@
 <script>
-  import { gameState, joinLobby } from '../lib/gameStore.js';
+  import { gameState } from '../lib/gameStore.js';
+  import { joinLobby } from '../lib/websocketService.js';
   import { getText } from '../lib/textStore.js';
   
   let playerName = '';

@@ -3,8 +3,9 @@ import logging
 import uuid
 import asyncio
 from fastapi import WebSocket
-from typing import Optional, Callable, Dict, Awaitable 
+from typing import Optional, Callable, Dict, Awaitable
 from lobby_manager import lobby_manager, PlayerStatus
+from game_roles import Role
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -37,7 +38,12 @@ async def handle_join(websocket: WebSocket, data: dict, _: str) -> Optional[str]
     new_player_id = str(uuid.uuid4())
 
     # Add player to the lobby
-    lobby_manager.add_player(new_player_id, player_name, websocket)
+    player = lobby_manager.add_player(new_player_id, player_name, websocket)
+
+    # Check if game is in progress (cannot join)
+    if not player:
+        await send_error(websocket, "Cannot join - game is already in progress")
+        return None
 
     # Send confirmation to the player
     await websocket.send_text(json.dumps({
@@ -55,9 +61,20 @@ async def handle_reconnect(websocket: WebSocket, data: dict, _: str) -> Optional
     """Handle a player reconnecting to the lobby."""
     player_id = data.get("playerId")
     player_name = data.get("playerName", "").strip()
+    game_id = data.get("gameId")
 
     if not player_id or not player_name:
         await send_error(websocket, "Player ID and name are required for reconnection")
+        return None
+
+    # Check if game ID matches current game
+    if game_id and game_id != lobby_manager.game_id:
+        logger.info(
+            f"Player {player_name} tried to reconnect to a different game session")
+        await websocket.send_text(json.dumps({
+            "type": "game_id_mismatch",
+            "currentGameId": lobby_manager.game_id
+        }))
         return None
 
     # Check if this player is in the disconnected players list
@@ -88,7 +105,8 @@ async def handle_reconnect(websocket: WebSocket, data: dict, _: str) -> Optional
             return player_id
         else:
             # Player was already removed, treat as a new connection
-            logger.info(f"Player {player_name} reconnection failed - already removed from lobby")
+            logger.info(
+                f"Player {player_name} reconnection failed - already removed from lobby")
 
     # If we get here, either:
     # 1. The player wasn't in the disconnected list
@@ -114,6 +132,11 @@ async def handle_unready(websocket: WebSocket, data: dict, player_id: str) -> Op
         await send_error(websocket, "Not connected to a lobby")
         return player_id
 
+    # Only allow unready if game hasn't started
+    if lobby_manager.game_in_progress:
+        await send_error(websocket, "Cannot change ready status - game in progress")
+        return player_id
+
     lobby_manager.set_player_status(player_id, PlayerStatus.WAITING)
     await lobby_manager.broadcast_lobby_state()
     return player_id
@@ -129,12 +152,30 @@ async def handle_start_game(websocket: WebSocket, data: dict, player_id: str) ->
         await send_error(websocket, "Not all players are ready")
         return player_id
 
-    success = lobby_manager.start_game()
-    if success:
-        await websocket.send_text(json.dumps({
-            "type": "game_started"
-        }))
-        await lobby_manager.broadcast_lobby_state()
+    # Check minimum player count
+    if len(lobby_manager.players) < 2:
+        await send_error(websocket, "Need at least 2 players to start")
+        return player_id
+
+    try:
+        success = lobby_manager.start_game()
+        if success:
+            # First broadcast updated lobby state with roles
+            await lobby_manager.broadcast_lobby_state()
+
+            # Then notify all players that the game has started
+            for pid, ws in lobby_manager.websockets.items():
+                try:
+                    await ws.send_text(json.dumps({
+                        "type": "game_started"
+                    }))
+                except Exception as e:
+                    logger.error(f"Error sending game_started to player {
+                                 pid}: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error in handle_start_game: {str(e)}")
+        await send_error(websocket, "Error starting game")
+
     return player_id
 
 
@@ -149,15 +190,66 @@ async def handle_mark_dead(websocket: WebSocket, data: dict, player_id: str) -> 
         await send_error(websocket, "Player is not alive")
         return player_id
 
+    # Special rule: Doctor cannot die unless all other players are dead
+    if player.role == Role.DOCTOR and not lobby_manager.can_doctor_die():
+        await send_error(websocket, "The Doctor cannot die until all other players are dead")
+        return player_id
+
     lobby_manager.set_player_status(player_id, PlayerStatus.DEAD)
     await lobby_manager.broadcast_lobby_state()
 
     # Check if game is over (all players are dead)
-    all_dead = all(p.status == PlayerStatus.DEAD for p in lobby_manager.players.values())
-    if all_dead:
-        await websocket.send_text(json.dumps({
-            "type": "game_over"
-        }))
+    if lobby_manager.is_game_over():
+        # End the current game
+        lobby_manager.end_game()
+
+        # Notify all players
+        for ws in lobby_manager.websockets.values():
+            try:
+                await ws.send_text(json.dumps({
+                    "type": "game_over"
+                }))
+            except Exception as e:
+                logger.error(f"Error sending game_over: {str(e)}")
+
+        # Broadcast the updated lobby state with new game ID
+        await lobby_manager.broadcast_lobby_state()
+
+    return player_id
+
+
+async def handle_end_game(websocket: WebSocket, data: dict, player_id: str) -> Optional[str]:
+    """Handle a doctor requesting to end the game."""
+    if not player_id:
+        await send_error(websocket, "Not connected to a lobby")
+        return player_id
+
+    player = lobby_manager.get_player(player_id)
+    if not player or player.status != PlayerStatus.ALIVE:
+        await send_error(websocket, "Player is not alive")
+        return player_id
+
+    # Only the doctor can end the game
+    if player.role != Role.DOCTOR:
+        await send_error(websocket, "Only the Doctor can end the game")
+        return player_id
+
+    # End the current game
+    lobby_manager.end_game()
+
+    # Notify all players
+    for ws in lobby_manager.websockets.values():
+        try:
+            await ws.send_text(json.dumps({
+                "type": "game_over",
+                "endedByDoctor": True
+            }))
+        except Exception as e:
+            logger.error(f"Error sending game_over: {str(e)}")
+
+    # Broadcast the updated lobby state with new game ID
+    await lobby_manager.broadcast_lobby_state()
+
     return player_id
 
 
@@ -176,6 +268,7 @@ MESSAGE_HANDLERS: Dict[str, MessageHandler] = {
     "unready": handle_unready,
     "start_game": handle_start_game,
     "mark_dead": handle_mark_dead,
+    "end_game": handle_end_game,
     "ping": handle_ping,
 }
 
@@ -222,16 +315,19 @@ async def handle_disconnect(player_id: str):
             await asyncio.sleep(RECONNECT_TIMEOUT)
             # If we reach here, the player didn't reconnect in time
             if player_id in disconnected_players:
-                logger.info(f"Removing player {player_name} ({player_id}) after reconnect timeout")
+                logger.info(f"Removing player {player_name} ({
+                            player_id}) after reconnect timeout")
                 del disconnected_players[player_id]
                 lobby_manager.remove_player(player_id)
                 await lobby_manager.broadcast_lobby_state()
         except asyncio.CancelledError:
             # Task was cancelled, which means player reconnected
-            logger.info(f"Cancelled removal task for {player_name} ({player_id})")
+            logger.info(f"Cancelled removal task for {
+                        player_name} ({player_id})")
 
     # Create and store the removal task
     removal_task = asyncio.create_task(remove_player_after_timeout())
     disconnected_players[player_id] = (player_name, removal_task)
 
-    logger.info(f"Player {player_name} ({player_id}) disconnected, removal scheduled in {RECONNECT_TIMEOUT} seconds")
+    logger.info(f"Player {player_name} ({player_id}) disconnected, removal scheduled in {
+                RECONNECT_TIMEOUT} seconds")

@@ -37,6 +37,7 @@ buttons:
   cancel: "CANCEL"
   start: "Start Game"
   dead: "I'm Dead"
+  end_game: "End Game"
 
 # Game state
 game:
@@ -44,3 +45,19 @@ game:
   gameover_title: "Game Over!"
   gameover_message: "All players are dead"
   player_dead: "You are dead!"
+
+roles:
+  doctor: "DOCTOR"
+  ally: "ALLY"
+  enemy: "ENEMY"
+  heartbroken_ally: "HEARTBROKEN ALLY"
+  heartbroken_enemy: "HEARTBROKEN ENEMY"
+  description:
+    doctor: "You are the Doctor. You choose who will be cured"
+    ally: "You are an Ally."
+    enemy: "You are an Enemy."
+    heartbroken_ally: "You are a Heartbroken Ally. Your heart is broken, you want to die."
+    heartbroken_enemy: "You are a Heartbroken Enemy. Your heart is broken, you want to die."
+
+doctor:
+  end_game_description: "Finish Game"
