@@ -5,14 +5,15 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 import logging
 
+# Import our QR code module
+from qr_generator import setup_qr_code
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-# Import the WebSocket handler
 
 app = FastAPI()
 
@@ -43,5 +44,13 @@ async def serve_spa(full_path: str):
 
 if __name__ == "__main__":
     import uvicorn
-    logger.info("Starting server at http://0.0.0.0:8000")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    # Set the port
+    port = 8000
+
+    # Generate QR codes and get the server URL
+    server_url = setup_qr_code(port=port, auto_open_browser=True)
+
+    # Start the server
+    logger.info(f"Starting server at {server_url}")
+    uvicorn.run(app, host="0.0.0.0", port=port)
