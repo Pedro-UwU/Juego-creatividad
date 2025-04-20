@@ -29,5 +29,8 @@ WORKDIR /app/backend/
 RUN pip install -r requirements.txt  
 
 COPY . /app
+WORKDIR /app/frontend/
+RUN npm run build
+WORKDIR /app/backend
 CMD ["python", "main.py"]
 
