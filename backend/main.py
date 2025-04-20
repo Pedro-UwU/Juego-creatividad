@@ -28,8 +28,6 @@ async def websocket_route(websocket: WebSocket):
     await websocket_endpoint(websocket)
 
 # Root route returns the index.html from the Svelte build
-
-
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
     # Path to the compiled frontend
@@ -49,7 +47,7 @@ if __name__ == "__main__":
     port = 8000
 
     # Generate QR codes and get the server URL
-    server_url = setup_qr_code(port=port, auto_open_browser=True)
+    server_url = setup_qr_code(port=port, auto_open_browser=False)
 
     # Start the server
     logger.info(f"Starting server at {server_url}")

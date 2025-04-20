@@ -3,38 +3,25 @@ import socket
 import logging
 import os
 import webbrowser
+import subprocess
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
 def get_local_ip():
-    """Get the local IP address of the machine on the LAN."""
+    env_ip = os.getenv("HOST_LAN_IP")
+    if env_ip:
+        return env_ip
+    # Fallback (e.g., local dev)
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # Create a socket that connects to an external server
-        # This is a trick to get the local IP address used for external connections
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # It doesn't actually connect, but prepares the socket
         s.connect(("8.8.8.8", 80))
-        # Get the socket's own address, which is the local IP
-        ip = s.getsockname()[0]
+        return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+    finally:
         s.close()
-        return ip
-    except Exception as e:
-        logger.error(f"Error getting IP address: {e}")
-        # Fallback to get all local interfaces
-        try:
-            hostname = socket.gethostname()
-            ip_list = socket.gethostbyname_ex(hostname)[2]
-            # Filter out localhost (127.0.0.1)
-            local_ips = [ip for ip in ip_list if not ip.startswith("127.")]
-            # Return first non-localhost IP
-            if local_ips:
-                return local_ips[0]
-        except:
-            pass
-        # Last resort
-        return '127.0.0.1'
 
 
 def generate_qr_code_terminal(url):
@@ -197,6 +184,7 @@ def setup_qr_code(port=8000, auto_open_browser=True):
             webbrowser.open(html_url)
         except Exception as e:
             logger.error(f"Error opening browser: {e}")
-            print(f"Please open the QR code manually at: {html_path}")
-
+    else:
+        print(f"Check QR code in browser: {html_url}")
+        print(f"Please open the QR code manually at: {html_path}")
     return server_url
