@@ -61,3 +61,13 @@ roles:
 
 doctor:
   end_game_description: "Finish Game"
+
+notifications:
+  player_death: "{playerName} has died"
+
+player:
+  you_are_dead: "YOU ARE DEAD"
+  doctor_reminder: "Remember: You cannot die. You choose who to cure"
+  game_in_progress: "Game is in progress..."
+  game_over: "Game over!"
+ 

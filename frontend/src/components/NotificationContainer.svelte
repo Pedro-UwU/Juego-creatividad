@@ -16,7 +16,7 @@
 <style>
   .notification-container {
     position: fixed;
-    bottom: 20px;
+    top: 20px;
     left: 0;
     right: 0;
     display: flex;

@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { nanoid } from 'nanoid';
+import { getText } from './textStore.js';
 
 // Store for notifications
 export const notifications = writable([]);
@@ -29,5 +30,9 @@ export function removeNotification(id) {
 
 // Create a death notification
 export function notifyPlayerDeath(playerName) {
-  return addNotification(`${playerName} has died`, 'death', 3000);
+  return addNotification(
+    getText('notifications.player_death', { playerName }), 
+    'death', 
+    3000
+  );
 }

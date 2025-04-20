@@ -21,7 +21,7 @@
 {#if visible}
   <div 
     class="notification {type}"
-    in:fly={{ y: 20, duration: 300 }}
+    in:fly={{ y: -20, duration: 300 }}
     out:fade={{ duration: 200 }}
   >
     {message}
@@ -31,7 +31,7 @@
 <style>
   .notification {
     position: fixed;
-    bottom: 20px;
+    top: 20px;
     left: 50%;
     transform: translateX(-50%);
     padding: 10px 20px;
