@@ -1,13 +1,14 @@
 <script>
   import Lobby from './components/Lobby.svelte';
-  import { getText } from './lib/textStore.js';
+  import NotificationContainer from './components/NotificationContainer.svelte';
 </script>
 
 <main>
-  <h1>{getText('app.title')}</h1>
-  <p class="subtitle">{getText('app.subtitle')}</p>
+  <h1>Game Lobby</h1>
+  <p class="subtitle">Connect, get ready, and play!</p>
   
   <Lobby />
+  <NotificationContainer />
 </main>
 
 <style>

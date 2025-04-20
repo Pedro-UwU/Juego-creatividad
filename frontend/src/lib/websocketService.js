@@ -1,5 +1,6 @@
 import { getText } from './textStore.js';
 import { 
+  gameState,
   updateConnectionState, 
   updatePlayerInfo, 
   updateGameState, 
@@ -29,7 +30,6 @@ export function connect() {
   if (socket) {
     socket.close();
   }
-  window.localStorage.removeItem("gameId")
 
   // Determine WebSocket URL
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -116,7 +116,7 @@ function handleSocketMessage(event) {
       return;
     }
     
-       // Check if game ID has changed (server restarted)
+    // Check if game ID has changed (server restarted)
     if (data.type === 'lobby_state' && data.gameId) {
       const storedGameId = window.localStorage.getItem('gameId');
       
@@ -196,6 +196,31 @@ function handleJoined(data) {
 // Handle lobby state update
 function handleLobbyState(data) {
   console.log('Received updated lobby state:', data);
+  
+  // Check for newly dead players
+  let currentState;
+  gameState.subscribe(state => {
+    currentState = state;
+  })();
+  
+  // Only check for deaths if we have previous data
+  if (currentState.players.length > 0 && data.players.length > 0) {
+    data.players.forEach(newPlayer => {
+      // Find matching player in old state
+      const oldPlayer = currentState.players.find(p => p.id === newPlayer.id);
+      
+      // If the player is now dead but wasn't before, trigger notification
+      if (oldPlayer && 
+          oldPlayer.status !== 'DEAD' && 
+          newPlayer.status === 'DEAD') {
+        // Import needs to be inside function to avoid circular dependencies
+        import('./notificationStore.js').then(module => {
+          module.notifyPlayerDeath(newPlayer.name);
+        });
+      }
+    });
+  }
+  
   updateGameState({
     players: data.players,
     allReady: data.allReady,
