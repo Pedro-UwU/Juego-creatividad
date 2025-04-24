@@ -96,3 +96,72 @@ class RoleAssigner:
             # Default gray if somehow invalid
             "color": role_colors.get(base_role, "#9E9E9E")
         }
+
+    @staticmethod
+    def count_team_members(players: List, team_role: Role = None) -> Dict[str, int]:
+        """Count players on each team (ally vs enemy).
+
+        If team_role is specified, only returns the count for that team.
+        Otherwise returns a dictionary with counts for both teams.
+        """
+        ally_count = 0
+        enemy_count = 0
+
+        for player in players:
+            if not hasattr(player, 'role') or not player.role:
+                continue
+
+            base_role = RoleAssigner.get_base_role(player.role)
+            if base_role == Role.ALLY:
+                ally_count += 1
+            elif base_role == Role.ENEMY:
+                enemy_count += 1
+
+        # If a specific team was requested, return just that count
+        if team_role == Role.ALLY:
+            return ally_count
+        elif team_role == Role.ENEMY:
+            return enemy_count
+
+        # Otherwise return counts for both teams
+        return {
+            "ALLY": ally_count,
+            "ENEMY": enemy_count
+        }
+
+    @staticmethod
+    def count_alive_team_members(players: List, team_role: Role = None) -> Dict[str, int]:
+        """Count alive players on each team.
+
+        Similar to count_team_members but only counts alive players.
+        """
+        from lobby_manager import PlayerStatus  # Import here to avoid circular imports
+
+        ally_count = 0
+        enemy_count = 0
+
+        for player in players:
+            if not hasattr(player, 'role') or not player.role:
+                continue
+
+            # Only count alive players
+            if not hasattr(player, 'status') or player.status not in [PlayerStatus.ALIVE, PlayerStatus.SICK]:
+                continue
+
+            base_role = RoleAssigner.get_base_role(player.role)
+            if base_role == Role.ALLY:
+                ally_count += 1
+            elif base_role == Role.ENEMY:
+                enemy_count += 1
+
+        # If a specific team was requested, return just that count
+        if team_role == Role.ALLY:
+            return ally_count
+        elif team_role == Role.ENEMY:
+            return enemy_count
+
+        # Otherwise return counts for both teams
+        return {
+            "ALLY": ally_count,
+            "ENEMY": enemy_count
+        }

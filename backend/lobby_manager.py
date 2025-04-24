@@ -14,6 +14,7 @@ class PlayerStatus(Enum):
     WAITING = "WAITING"
     READY = "READY"
     ALIVE = "ALIVE"
+    SICK = "SICK"  # New status for players who are sick in a round
     DEAD = "DEAD"
 
 
@@ -45,6 +46,14 @@ class Player:
         if self.role:
             base_dict.update(RoleAssigner.get_role_info(self.role))
 
+        # Add status color for UI display
+        status_colors = {
+            PlayerStatus.SICK: "#6B8E23"  # Olive green/slimy color for sick players
+        }
+
+        if self.status in status_colors:
+            base_dict["statusColor"] = status_colors[self.status]
+
         return base_dict
 
 
@@ -55,6 +64,9 @@ class LobbyManager:
         self.game_in_progress = False
         # Generate a unique ID for this game session
         self.game_id = str(uuid.uuid4())
+        self.current_round = 0
+        self.sick_players: List[str] = []  # List of player IDs who are currently sick
+        self.cured_player: Optional[str] = None  # ID of player cured in current round
 
     def add_player(self, player_id: str, player_name: str, websocket) -> Player:
         """Add a new player to the lobby."""
@@ -149,24 +161,6 @@ class LobbyManager:
         logger.info(f"Game started with ID: {self.game_id}!")
         return True
 
-    def end_game(self) -> bool:
-        """End the current game and reset for a new one."""
-        if not self.game_in_progress:
-            return False
-
-        # Generate a new game ID for the next game
-        self.game_id = str(uuid.uuid4())
-
-        # Reset game state
-        self.game_in_progress = False
-
-        # Reset player statuses (keeping them in the lobby)
-        for player in self.players.values():
-            player.status = PlayerStatus.WAITING
-            player.role = None
-
-        logger.info(f"Game ended. New lobby ID: {self.game_id}")
-        return True
 
     def can_doctor_die(self) -> bool:
         """Check if the doctor can be marked as dead (only if all other players are dead)."""
@@ -231,6 +225,141 @@ class LobbyManager:
                 logger.error(f"Error sending message to player {
                              player_id}: {str(e)}")
                 # Don't remove here - this will be handled by the disconnect handler
+
+    def start_new_round(self) -> bool:
+        """Start a new round by randomly selecting players to get sick."""
+        if not self.game_in_progress:
+            logger.error("Cannot start round - game not in progress")
+            return False
+
+        # Reset round state
+        self.current_round += 1
+        self.sick_players = []
+        self.cured_player = None
+
+        logger.info(f"Starting round {self.current_round}")
+
+        # Get all alive players except the doctor
+        alive_players = [
+            player for player in self.players.values()
+            if player.status == PlayerStatus.ALIVE and player.role != Role.DOCTOR
+        ]
+
+        # Determine how many players should get sick
+        num_to_sicken = 1  # Default
+        if len(self.players) > 10:
+            num_to_sicken = 2
+
+        # Cap at 4 or the number of alive non-doctor players, whichever is smaller
+        num_to_sicken = min(num_to_sicken, 4, len(alive_players))
+
+        if num_to_sicken == 0:
+            logger.warning("No players to make sick - skipping round")
+            return False
+
+        # Randomly select players to get sick
+        sick_candidates = random.sample(alive_players, num_to_sicken)
+
+        # Mark selected players as sick
+        for player in sick_candidates:
+            player.status = PlayerStatus.SICK
+            self.sick_players.append(player.id)
+            logger.info(f"Player {player.name} ({player.id}) is now sick")
+
+        return True
+
+    def cure_player(self, player_id: str) -> bool:
+        """Doctor cures a sick player."""
+        if not self.game_in_progress or not self.sick_players:
+            return False
+
+        # Verify the player is sick
+        player = self.get_player(player_id)
+        if not player or player.status != PlayerStatus.SICK:
+            return False
+
+        # Record the cured player
+        self.cured_player = player_id
+        logger.info(f"Player {player.name} ({player_id}) has been cured")
+
+        return True
+
+    def end_round(self) -> bool:
+        """End the current round, causing uncured sick players to die."""
+        if not self.game_in_progress:
+            return False
+
+        logger.info(f"Ending round {self.current_round}")
+
+        # Process sick players
+        for player_id in self.sick_players:
+            # Skip the cured player
+            if player_id == self.cured_player:
+                # Restore cured player to ALIVE status
+                player = self.get_player(player_id)
+                if player:
+                    player.status = PlayerStatus.ALIVE
+                    logger.info(f"Player {player.name} ({player_id}) has recovered")
+                continue
+
+            # Uncured sick players die
+            player = self.get_player(player_id)
+            if player:
+                player.status = PlayerStatus.DEAD
+                logger.info(f"Player {player.name} ({player_id}) has died from sickness")
+
+        # Check if game should end (half or more non-doctor players are dead)
+        if self.should_game_end():
+            return self.end_game()
+
+        # Reset sick players list for next round
+        self.sick_players = []
+        self.cured_player = None
+
+        return True
+
+    def should_game_end(self) -> bool:
+        """Check if the game should end (half or more non-doctor players are dead)."""
+        non_doctor_players = [p for p in self.players.values() if p.role != Role.DOCTOR]
+        dead_players = [p for p in non_doctor_players if p.status == PlayerStatus.DEAD]
+
+        return len(dead_players) >= len(non_doctor_players) / 2
+
+    def calculate_winner(self) -> str:
+        """Calculate which team won the game (ALLY or ENEMY)."""
+        team_counts = RoleAssigner.count_alive_team_members(self.players.values())
+
+        # Check if allies outnumber enemies
+        if team_counts["ALLY"] > team_counts["ENEMY"]:
+            return "ALLY"
+        else:
+            return "ENEMY"
+
+    def end_game(self) -> bool:
+        """End the current game and reset for a new one."""
+        if not self.game_in_progress:
+            return False
+
+        # Calculate the winner before resetting
+        winner = self.calculate_winner()
+        logger.info(f"Game over! Winner: {winner}")
+
+        # Generate a new game ID for the next game
+        self.game_id = str(uuid.uuid4())
+
+        # Reset game state
+        self.game_in_progress = False
+        self.current_round = 0
+        self.sick_players = []
+        self.cured_player = None
+
+        # Reset player statuses (keeping them in the lobby)
+        for player in self.players.values():
+            player.status = PlayerStatus.WAITING
+            player.role = None
+
+        logger.info(f"Game ended. New lobby ID: {self.game_id}")
+        return winner
 
 
 # Create a singleton instance

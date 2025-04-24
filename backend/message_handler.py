@@ -198,16 +198,17 @@ async def handle_mark_dead(websocket: WebSocket, data: dict, player_id: str) -> 
     lobby_manager.set_player_status(player_id, PlayerStatus.DEAD)
     await lobby_manager.broadcast_lobby_state()
 
-    # Check if game is over (all players are dead)
-    if lobby_manager.is_game_over():
-        # End the current game
-        lobby_manager.end_game()
+    # Check if game is over (half or more non-doctor players are dead)
+    if lobby_manager.should_game_end():
+        # End the current game and get winner
+        winner = lobby_manager.end_game()
 
         # Notify all players
         for ws in lobby_manager.websockets.values():
             try:
                 await ws.send_text(json.dumps({
-                    "type": "game_over"
+                    "type": "game_over",
+                    "winner": winner
                 }))
             except Exception as e:
                 logger.error(f"Error sending game_over: {str(e)}")
@@ -235,19 +236,167 @@ async def handle_end_game(websocket: WebSocket, data: dict, player_id: str) -> O
         return player_id
 
     # End the current game
-    lobby_manager.end_game()
+    winner = lobby_manager.end_game()
 
     # Notify all players
     for ws in lobby_manager.websockets.values():
         try:
             await ws.send_text(json.dumps({
                 "type": "game_over",
-                "endedByDoctor": True
+                "endedByDoctor": True,
+                "winner": winner
             }))
         except Exception as e:
             logger.error(f"Error sending game_over: {str(e)}")
 
     # Broadcast the updated lobby state with new game ID
+    await lobby_manager.broadcast_lobby_state()
+
+    return player_id
+
+
+async def handle_start_round(websocket: WebSocket, data: dict, player_id: str) -> Optional[str]:
+    """Handle a doctor request to start a new round."""
+    if not player_id:
+        await send_error(websocket, "Not connected to a lobby")
+        return player_id
+
+    player = lobby_manager.get_player(player_id)
+    if not player or player.status != PlayerStatus.ALIVE:
+        await send_error(websocket, "Player is not alive")
+        return player_id
+
+    # Only the doctor can start a round
+    if player.role != Role.DOCTOR:
+        await send_error(websocket, "Only the Doctor can start a round")
+        return player_id
+
+    # Start a new round
+    success = lobby_manager.start_new_round()
+    if not success:
+        await send_error(websocket, "Failed to start round")
+        return player_id
+
+    # Notify all players that a round has started
+    for ws in lobby_manager.websockets.values():
+        try:
+            await ws.send_text(json.dumps({
+                "type": "round_started",
+                "roundNumber": lobby_manager.current_round
+            }))
+        except Exception as e:
+            logger.error(f"Error sending round_started: {str(e)}")
+
+    # Send the list of sick players to the doctor
+    sick_players_info = []
+    for sick_id in lobby_manager.sick_players:
+        sick_player = lobby_manager.get_player(sick_id)
+        if sick_player:
+            sick_players_info.append({
+                "id": sick_player.id,
+                "name": sick_player.name
+            })
+
+    await websocket.send_text(json.dumps({
+        "type": "sick_players",
+        "players": sick_players_info
+    }))
+
+    # Broadcast updated lobby state to all players
+    await lobby_manager.broadcast_lobby_state()
+
+    return player_id
+
+
+async def handle_cure_player(websocket: WebSocket, data: dict, player_id: str) -> Optional[str]:
+    """Handle a doctor curing a sick player."""
+    if not player_id:
+        await send_error(websocket, "Not connected to a lobby")
+        return player_id
+
+    player = lobby_manager.get_player(player_id)
+    if not player or player.status != PlayerStatus.ALIVE:
+        await send_error(websocket, "Player is not alive")
+        return player_id
+
+    # Only the doctor can cure a player
+    if player.role != Role.DOCTOR:
+        await send_error(websocket, "Only the Doctor can cure a player")
+        return player_id
+
+    # Get the player to cure
+    player_to_cure_id = data.get("playerId")
+
+    # Doctor may choose not to cure anyone
+    if player_to_cure_id:
+        # Apply the cure
+        success = lobby_manager.cure_player(player_to_cure_id)
+        if not success:
+            await send_error(websocket, "Failed to cure player")
+            return player_id
+
+        # Get the player name for the response
+        cured_player = lobby_manager.get_player(player_to_cure_id)
+        player_name = cured_player.name if cured_player else "Unknown player"
+
+        # Notify the doctor of the cure action
+        await websocket.send_text(json.dumps({
+            "type": "player_cured",
+            "playerId": player_to_cure_id,
+            "playerName": player_name
+        }))
+    else:
+        # Doctor chose not to cure anyone
+        lobby_manager.cured_player = None
+        await websocket.send_text(json.dumps({
+            "type": "no_player_cured"
+        }))
+
+    return player_id
+
+
+async def handle_end_round(websocket: WebSocket, data: dict, player_id: str) -> Optional[str]:
+    """Handle a doctor ending the current round."""
+    if not player_id:
+        await send_error(websocket, "Not connected to a lobby")
+        return player_id
+
+    player = lobby_manager.get_player(player_id)
+    if not player or player.status != PlayerStatus.ALIVE:
+        await send_error(websocket, "Player is not alive")
+        return player_id
+
+    # Only the doctor can end a round
+    if player.role != Role.DOCTOR:
+        await send_error(websocket, "Only the Doctor can end a round")
+        return player_id
+
+    # End the round
+    result = lobby_manager.end_round()
+
+    # If game ended, result will be the winning team
+    if isinstance(result, str):
+        # Game is over, result contains the winner
+        for ws in lobby_manager.websockets.values():
+            try:
+                await ws.send_text(json.dumps({
+                    "type": "game_over",
+                    "winner": result
+                }))
+            except Exception as e:
+                logger.error(f"Error sending game_over: {str(e)}")
+    else:
+        # Round ended normally, notify all players
+        for ws in lobby_manager.websockets.values():
+            try:
+                await ws.send_text(json.dumps({
+                    "type": "round_ended",
+                    "roundNumber": lobby_manager.current_round
+                }))
+            except Exception as e:
+                logger.error(f"Error sending round_ended: {str(e)}")
+
+    # Broadcast updated lobby state to all players
     await lobby_manager.broadcast_lobby_state()
 
     return player_id
@@ -260,6 +409,7 @@ async def handle_ping(websocket: WebSocket, data: dict, player_id: str) -> Optio
     }))
     return player_id
 
+
 # Map message types to their handler functions
 MESSAGE_HANDLERS: Dict[str, MessageHandler] = {
     "join": handle_join,
@@ -269,6 +419,9 @@ MESSAGE_HANDLERS: Dict[str, MessageHandler] = {
     "start_game": handle_start_game,
     "mark_dead": handle_mark_dead,
     "end_game": handle_end_game,
+    "start_round": handle_start_round,  # New handler
+    "cure_player": handle_cure_player,  # New handler
+    "end_round": handle_end_round,      # New handler
     "ping": handle_ping,
 }
 
