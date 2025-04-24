@@ -15,7 +15,7 @@ class PlayerStatus(Enum):
     WAITING = "WAITING"
     READY = "READY"
     ALIVE = "ALIVE"
-    SICK = "SICK"  # New status for players who are sick in a round
+    SICK = "SICK"  
     DEAD = "DEAD"
 
 

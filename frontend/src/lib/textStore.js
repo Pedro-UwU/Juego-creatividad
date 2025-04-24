@@ -1,5 +1,5 @@
 import { readable } from 'svelte/store';
-import textContent from './text.yaml';
+import textContent from './textES.yaml';
 
 // Format text with variables
 function formatText(text, variables = {}) {

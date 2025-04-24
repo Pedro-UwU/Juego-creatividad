@@ -1,0 +1,100 @@
+# Application text content
+app:
+  title: "Sala de Juego"
+  subtitle: "Conéctate, prepárate y ¡juega!"
+
+# Connection states
+connection:
+  connecting: "Conectando al servidor..."
+  error: "Error: {message}"
+  success: "Conectado como {playerName}"
+  reconnecting: "Conexión perdida. Reconectando..."
+  reconnected: "¡Reconectado exitosamente!"
+  reconnect_failed: "No se pudo reconectar. Por favor, actualiza la página."
+
+# Lobby screen
+lobby:
+  title: "Sala de Juego"
+  noplayers: "Aún no se ha unido ningún jugador"
+
+# Join form
+join:
+  title: "Unirse a la Sala de Juego"
+  label: "Tu Nombre:"
+  placeholder: "Ingresa tu nombre"
+  button: "Unirse a la Sala"
+
+# Player status
+status:
+  waiting: "ESPERANDO"
+  ready: "LISTO"
+  alive: "VIVO"
+  dead: "MUERTO"
+  sick: "ENFERMO"
+
+# Action buttons
+buttons:
+  ready: "LISTO"
+  cancel: "CANCELAR"
+  start: "Iniciar Juego"
+  dead: "Estoy Muerto"
+  end_game: "Finalizar Juego"
+
+# Game state
+game:
+  title: "Juego en Progreso"
+  gameover_title: "¡Fin del Juego!"
+  gameover_message: "Todos los jugadores están muertos"
+  player_dead: "¡Estás muerto!"
+  winner: "¡El equipo {team} ha ganado!"
+  allies_win: "¡Los Aliados han ganado!"
+  enemies_win: "¡Los Enemigos han ganado!"
+
+roles:
+  doctor: "MÉDICO"
+  ally: "ALIADO"
+  enemy: "ENEMIGO"
+  heartbroken_ally: "ALIADO CON CORAZÓN ROTO"
+  heartbroken_enemy: "ENEMIGO CON CORAZÓN ROTO"
+  description:
+    doctor: "Eres el Médico. Tú eliges quién será curado"
+    ally: "Eres un Aliado."
+    enemy: "Eres un Enemigo."
+    heartbroken_ally: "Eres un Aliado con Corazón Roto. Tu corazón está roto, quieres morir."
+    heartbroken_enemy: "Eres un Enemigo con Corazón Roto. Tu corazón está roto, quieres morir."
+
+doctor:
+  end_game_description: "Finalizar Juego"
+  sick_players: "Jugadores Enfermos"
+  choose_player: "Elige un jugador para curar:"
+  player_cured: "Has curado a {playerName}"
+  no_player_cured: "No curaste a nadie en esta ronda"
+  title: "Controles del Médico"
+  no_sick_players: "Nadie está enfermo en esta ronda"
+
+notifications:
+  player_death: "{playerName} ha muerto"
+  player_sick: "{playerName} ahora está enfermo"
+  player_cured: "{playerName} ha sido curado"
+  round_started: "La Ronda {roundNumber} ha comenzado"
+  round_ended: "La Ronda {roundNumber} ha terminado"
+  game_over: "El equipo {winner} ha ganado el juego"
+
+player:
+  you_are_dead: "ESTÁS MUERTO"
+  doctor_reminder: "Recuerda: No puedes morir. Tú eliges a quién curar"
+  game_in_progress: "Juego en progreso..."
+  game_over: "¡Fin del juego!"
+  you_are_sick: "ESTÁS ENFERMO"
+
+rounds:
+  title: "Ronda {roundNumber}"
+  start_round: "Iniciar Ronda"
+  end_round: "Finalizar Ronda"
+  round_started: "La Ronda {roundNumber} ha comenzado"
+  round_ended: "La Ronda {roundNumber} ha terminado"
+  no_cure: "No curar a nadie"
+  waiting_for_first_round: "Esperando para comenzar"
+  in_progress: "En progreso"
+  ended: "Completado"
+  round_label: "RONDA"
