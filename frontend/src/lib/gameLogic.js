@@ -37,6 +37,29 @@ export function endGame() {
   });
 }
 
+// New round-based functions
+export function startRound() {
+  console.log('Starting a new round');
+  return sendMessage({
+    type: 'start_round'
+  });
+}
+
+export function curePlayer(playerId) {
+  console.log('Curing player:', playerId);
+  return sendMessage({
+    type: 'cure_player',
+    playerId: playerId  // Can be null if doctor chooses not to cure anyone
+  });
+}
+
+export function endRound() {
+  console.log('Ending the current round');
+  return sendMessage({
+    type: 'end_round'
+  });
+}
+
 // Get role display text
 export function getRoleDisplayText(role) {
   if (!role) return '';
@@ -87,6 +110,7 @@ export function getStatusClass(status) {
     case 'WAITING': return 'status-waiting';
     case 'READY': return 'status-ready';
     case 'ALIVE': return 'status-alive';
+    case 'SICK': return 'status-sick';
     case 'DEAD': return 'status-dead';
     default: return '';
   }

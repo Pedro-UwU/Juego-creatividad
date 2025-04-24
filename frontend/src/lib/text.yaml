@@ -30,6 +30,7 @@ status:
   ready: "READY"
   alive: "ALIVE"
   dead: "DEAD"
+  sick: "SICK"
 
 # Action buttons
 buttons:
@@ -45,6 +46,9 @@ game:
   gameover_title: "Game Over!"
   gameover_message: "All players are dead"
   player_dead: "You are dead!"
+  winner: "The {team} team won!"
+  allies_win: "The Allies have won!"
+  enemies_win: "The Enemies have won!"
 
 roles:
   doctor: "DOCTOR"
@@ -61,13 +65,37 @@ roles:
 
 doctor:
   end_game_description: "Finish Game"
+  sick_players: "Sick Players"
+  choose_player: "Choose a player to cure:"
+  player_cured: "You have cured {playerName}"
+  no_player_cured: "You didn't cure anyone this round"
+  title: "Doctor Controls"
+  no_sick_players: "No one is sick this round"
 
 notifications:
   player_death: "{playerName} has died"
+  player_sick: "{playerName} is now sick"
+  player_cured: "{playerName} has been cured"
+  round_started: "Round {roundNumber} has begun"
+  round_ended: "Round {roundNumber} has ended"
+  game_over: "{winner} team has won the game"
 
 player:
   you_are_dead: "YOU ARE DEAD"
   doctor_reminder: "Remember: You cannot die. You choose who to cure"
   game_in_progress: "Game is in progress..."
   game_over: "Game over!"
- 
+  you_are_sick: "YOU ARE SICK"
+
+rounds:
+  title: "Round {roundNumber}"
+  start_round: "Start Round"
+  end_round: "End Round"
+  round_started: "Round {roundNumber} has started"
+  round_ended: "Round {roundNumber} has ended"
+  no_cure: "Don't cure anyone"
+  waiting_for_first_round: "Waiting to begin"
+  in_progress: "In progress"
+  ended: "Completed"
+  round_label: "ROUND"
+

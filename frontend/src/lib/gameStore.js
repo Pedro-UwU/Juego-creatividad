@@ -20,7 +20,14 @@ export const gameState = writable({
   
   // Role information
   playerRole: null,
-  roleInfo: null
+  roleInfo: null,
+  
+  // Round information (new)
+  currentRound: 0,
+  roundInProgress: false,
+  sickPlayers: [],
+  playerCured: undefined,
+  winner: null
 });
 
 // Helper functions to update specific parts of the state
@@ -52,6 +59,14 @@ export function updateRoleInfo(updates) {
   }));
 }
 
+// New function to update round information
+export function updateRoundInfo(updates) {
+  gameState.update(state => ({
+    ...state,
+    ...updates
+  }));
+}
+
 // Reset the entire game state
 export function resetGameState() {
   gameState.set({
@@ -66,6 +81,11 @@ export function resetGameState() {
     gameOver: false,
     gameInProgress: false,
     playerRole: null,
-    roleInfo: null
+    roleInfo: null,
+    currentRound: 0,
+    roundInProgress: false,
+    sickPlayers: [],
+    playerCured: undefined,
+    winner: null
   });
 }

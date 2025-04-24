@@ -5,9 +5,11 @@ import {
   updatePlayerInfo, 
   updateGameState, 
   updateRoleInfo,
+  updateRoundInfo,
   resetGameState
 } from './gameStore.js';
 import { handleGameMessage } from './gameLogic.js';
+import { get } from 'svelte/store';
 
 // Socket instance
 let socket = null;
@@ -161,7 +163,28 @@ function handleSocketMessage(event) {
         break;
       
       case 'game_over':
-        handleGameOver();
+        handleGameOver(data);
+        break;
+        
+      // New round-based message handlers
+      case 'round_started':
+        handleRoundStarted(data);
+        break;
+        
+      case 'sick_players':
+        handleSickPlayers(data);
+        break;
+        
+      case 'player_cured':
+        handlePlayerCured(data);
+        break;
+        
+      case 'no_player_cured':
+        handleNoPlayerCured();
+        break;
+        
+      case 'round_ended':
+        handleRoundEnded(data);
         break;
         
       case 'pong':
@@ -218,6 +241,15 @@ function handleLobbyState(data) {
           module.notifyPlayerDeath(newPlayer.name);
         });
       }
+      
+      // If the player is now sick but wasn't before, trigger notification
+      if (oldPlayer && 
+          oldPlayer.status !== 'SICK' && 
+          newPlayer.status === 'SICK') {
+        import('./notificationStore.js').then(module => {
+          module.notifyPlayerSick(newPlayer.name);
+        });
+      }
     });
   }
   
@@ -247,14 +279,81 @@ function handleGameStarted() {
 }
 
 // Handle game over message
-function handleGameOver() {
-  updateGameState({ gameOver: true });
+function handleGameOver(data) {
+  updateGameState({ 
+    gameOver: true,
+    winner: data.winner || null  // Store the winning team
+  });
+  
+  // Show winner notification
+  if (data.winner) {
+    import('./notificationStore.js').then(module => {
+      module.notifyGameOver(data.winner);
+    });
+  }
 }
 
 // Handle error message
 function handleError(data) {
   updateConnectionState({ connectionError: data.message });
   console.error('Server error:', data.message);
+}
+
+// New round-based message handlers
+function handleRoundStarted(data) {
+  console.log('Round started:', data.roundNumber);
+  updateRoundInfo({
+    currentRound: data.roundNumber,
+    roundInProgress: true,
+    sickPlayers: [], // Will be populated in handleSickPlayers
+    playerCured: undefined
+  });
+  
+  // Display round started notification
+  import('./notificationStore.js').then(module => {
+    module.notifyRoundStarted(data.roundNumber);
+  });
+}
+
+function handleSickPlayers(data) {
+  console.log('Sick players:', data.players);
+  updateRoundInfo({
+    sickPlayers: data.players
+  });
+}
+
+function handlePlayerCured(data) {
+  console.log('Player cured:', data.playerName, gameState);
+  let state = get(gameState)
+  updateRoundInfo({
+    playerCured: true,
+    sickPlayers: [...state.sickPlayers].filter(p => p.id !== data.playerId)
+  });
+  
+  // Display player cured notification
+  import('./notificationStore.js').then(module => {
+    module.notifyPlayerCured(data.playerName);
+  });
+}
+
+function handleNoPlayerCured() {
+  console.log('No player cured this round');
+  updateRoundInfo({
+    playerCured: false
+  });
+}
+
+function handleRoundEnded(data) {
+  console.log('Round ended:', data.roundNumber);
+  updateRoundInfo({
+    roundInProgress: false,
+    sickPlayers: []
+  });
+  
+  // Display round ended notification
+  import('./notificationStore.js').then(module => {
+    module.notifyRoundEnded(data.roundNumber);
+  });
 }
 
 // Send a message to the server

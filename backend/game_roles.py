@@ -1,6 +1,6 @@
-from enum import Enum
-from typing import List, Dict, Tuple
 import random
+from enum import Enum
+from typing import List, Dict
 import logging
 
 # Configure logging
@@ -53,8 +53,7 @@ class RoleAssigner:
         # Add heartbroken if needed
         if has_heartbroken:
             # Decide if heartbroken is ally or enemy (50% chance either way)
-            heartbroken_role = Role.HEARTBROKEN_ALLY if random.random(
-            ) < 0.5 else Role.HEARTBROKEN_ENEMY
+            heartbroken_role = Role.HEARTBROKEN_ALLY if random.random() < 0.5 else Role.HEARTBROKEN_ENEMY
             roles.append(heartbroken_role)
 
         # Shuffle the roles
